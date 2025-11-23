@@ -1,0 +1,252 @@
+import * as THREE from 'three';
+import * as dat from 'dat.gui';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+
+import bgTexture1 from '/images/1.jpg';
+import bgTexture2 from '/images/2.jpg';
+import bgTexture3 from '/images/3.jpg';
+import bgTexture4 from '/images/4.jpg';
+import sunTexture from '/images/sun.jpg';
+import mercuryTexture from '/images/mercurymap.jpg';
+import mercuryBump from '/images/mercurybump.jpg';
+import venusTexture from '/images/venusmap.jpg';
+import venusBump from '/images/venusmap.jpg';
+import venusAtmosphere from '/images/venus_atmosphere.jpg';
+import earthTexture from '/images/earth_daymap.jpg';
+import earthNightTexture from '/images/earth_nightmap.jpg';
+import earthAtmosphere from '/images/earth_atmosphere.jpg';
+import earthMoonTexture from '/images/moonmap.jpg';
+import earthMoonBump from '/images/moonbump.jpg';
+import marsTexture from '/images/marsmap.jpg';
+import marsBump from '/images/marsbump.jpg';
+import jupiterTexture from '/images/jupiter.jpg';
+import ioTexture from '/images/jupiterIo.jpg';
+import europaTexture from '/images/jupiterEuropa.jpg';
+import ganymedeTexture from '/images/jupiterGanymede.jpg';
+import callistoTexture from '/images/jupiterCallisto.jpg';
+import saturnTexture from '/images/saturnmap.jpg';
+import satRingTexture from '/images/saturn_ring.png';
+import uranusTexture from '/images/uranus.jpg';
+import uraRingTexture from '/images/uranus_ring.png';
+import neptuneTexture from '/images/neptune.jpg';
+import plutoTexture from '/images/plutomap.jpg';
+
+import { createPlanet } from './scripts/planets.js';
+import { loadAsteroids } from './scripts/loaders.js';
+import { identifyPlanet } from './scripts/identify.js';
+import { showPlanetInfo, closeInfoNoZoomOut, closeInfo } from './scripts/ui.js';
+import { createEarthMaterial } from './scripts/shaders.js';
+import { animate } from './scripts/animate.js';
+
+// ******  PERSIAPAN  ******
+console.log("Membuat scene");
+const scene = new THREE.Scene();
+
+console.log("Membuat kamera proyeksi perspektif");
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(-175, 115, 5);
+
+console.log("Membuat renderer");
+const renderer = new THREE.WebGL1Renderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+console.log("Membuat kontrol orbit");
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.75;
+controls.screenSpacePanning = false;
+
+console.log("Menyiapkan pemuat tekstur");
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const loadTexture = new THREE.TextureLoader();
+
+// postprocessing
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+outlinePass.edgeStrength = 3;
+outlinePass.edgeGlow = 1;
+outlinePass.visibleEdgeColor.set(0xffffff);
+outlinePass.hiddenEdgeColor.set(0x190a05);
+composer.addPass(outlinePass);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1, 0.4, 0.85);
+bloomPass.threshold = 1;
+bloomPass.radius = 0.9;
+composer.addPass(bloomPass);
+
+// cahaya ambient & background
+console.log("Menambahkan cahaya ambient");
+const lightAmbient = new THREE.AmbientLight(0x222222, 6);
+scene.add(lightAmbient);
+scene.background = cubeTextureLoader.load([ bgTexture3, bgTexture1, bgTexture2, bgTexture2, bgTexture4, bgTexture2 ]);
+
+// GUI
+const gui = new dat.GUI({ autoPlace: false });
+document.getElementById('gui-container').appendChild(gui.domElement);
+
+// pengaturan interaktif
+const settings = { accelerationOrbit: 1, acceleration: 1, sunIntensity: 1.9 };
+let sunMat = null;
+gui.add(settings, 'accelerationOrbit', 0, 10);
+gui.add(settings, 'acceleration', 0, 10);
+gui.add(settings, 'sunIntensity', 1, 10).onChange(v => { if (sunMat) sunMat.emissiveIntensity = v; });
+
+// raycast & mouse
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+function onMouseMove(event) {
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+}
+
+// PILIH PLANET (state & refs)
+let selectedPlanet = null;
+const isMovingTowardsPlanetRef = { value: false };
+const targetCameraPositionRef = { value: new THREE.Vector3() };
+let offset = 0;
+const zoomFlagsRef = { isZoomingOut: false, zoomOutTargetPosition: new THREE.Vector3(-175, 115, 5) };
+
+// fungsi klik: gunakan identifyPlanet dari identify.js
+function onDocumentMouseDown(event) {
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(raycastTargets);
+  if (intersects.length > 0) {
+    const clickedObject = intersects[0].object;
+    const { result, offset: newOffset } = identifyPlanet(clickedObject, { mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, pluto });
+    if (result) {
+      selectedPlanet = result;
+      closeInfoNoZoomOut(settings);
+      settings.accelerationOrbit = 0;
+      const planetPosition = new THREE.Vector3();
+      selectedPlanet.planet.getWorldPosition(planetPosition);
+      controls.target.copy(planetPosition);
+      camera.lookAt(planetPosition);
+      offset = newOffset;
+      targetCameraPositionRef.value.copy(planetPosition).add(camera.position.clone().sub(planetPosition).normalize().multiplyScalar(offset));
+      isMovingTowardsPlanetRef.value = true;
+    }
+  }
+}
+
+// MATAHARI
+const sunSize = 697/40;
+const sunGeom = new THREE.SphereGeometry(sunSize, 32, 20);
+sunMat = new THREE.MeshStandardMaterial({
+  emissive: 0xFFF88F,
+  emissiveMap: loadTexture.load(sunTexture),
+  emissiveIntensity: settings.sunIntensity
+});
+const sun = new THREE.Mesh(sunGeom, sunMat);
+scene.add(sun);
+const pointLight = new THREE.PointLight(0xFDFFD3 , 1200, 400, 1.4);
+scene.add(pointLight);
+
+// MOONS data
+const earthMoon = [{ size:1.6, texture: earthMoonTexture, bump: earthMoonBump, orbitSpeed: 0.001 * settings.accelerationOrbit, orbitRadius: 10 }];
+const marsMoons = [
+  { modelPath:'/images/mars/phobos.glb', scale:0.1, orbitRadius:5, orbitSpeed:0.002 * settings.accelerationOrbit, position:100, mesh:null },
+  { modelPath:'/images/mars/deimos.glb', scale:0.1, orbitRadius:9, orbitSpeed:0.0005 * settings.accelerationOrbit, position:120, mesh:null }
+];
+const jupiterMoons = [
+  { size:1.6, texture:ioTexture, orbitRadius:20, orbitSpeed:0.0005 * settings.accelerationOrbit },
+  { size:1.4, texture:europaTexture, orbitRadius:24, orbitSpeed:0.00025 * settings.accelerationOrbit },
+  { size:2, texture:ganymedeTexture, orbitRadius:28, orbitSpeed:0.000125 * settings.accelerationOrbit },
+  { size:1.7, texture:callistoTexture, orbitRadius:32, orbitSpeed:0.00006 * settings.accelerationOrbit }
+];
+
+// BUAT PLANET (memanggil createPlanet)
+const mercury = createPlanet(scene, loadTexture, 'Mercury', 2.4, 40, 0, mercuryTexture, mercuryBump);
+const venus = createPlanet(scene, loadTexture, 'Venus', 6.1, 65, 3, venusTexture, venusBump, null, venusAtmosphere);
+const earth = createPlanet(scene, loadTexture, 'Earth', 6.4, 90, 23, createEarthMaterial(loadTexture, earthTexture, earthNightTexture, sun), null, null, earthAtmosphere, earthMoon);
+const mars = createPlanet(scene, loadTexture, 'Mars', 3.4, 115, 25, marsTexture, marsBump);
+const jupiter = createPlanet(scene, loadTexture, 'Jupiter', 69/4, 200, 3, jupiterTexture, null, null, null, jupiterMoons);
+const saturn = createPlanet(scene, loadTexture, 'Saturn', 58/4, 270, 26, saturnTexture, null, { innerRadius:18, outerRadius:29, texture: satRingTexture });
+const uranus = createPlanet(scene, loadTexture, 'Uranus', 25/4, 320, 82, uranusTexture, null, { innerRadius:6, outerRadius:8, texture: uraRingTexture });
+const neptune = createPlanet(scene, loadTexture, 'Neptune', 24/4, 340, 28, neptuneTexture);
+const pluto = createPlanet(scene, loadTexture, 'Pluto', 1, 350, 57, plutoTexture);
+
+// planetData
+const planetData = {
+  'Mercury': { radius:'2,439.7 km', tilt:'0.034°', rotation:'58.6 Earth days', orbit:'88 Earth days', distance:'57.9 million km', moons:'0', info:'Planet terkecil di tata surya kita dan yang paling dekat dengan Matahari.' },
+  'Venus': { radius:'6,051.8 km', tilt:'177.4°', rotation:'243 Earth days', orbit:'225 Earth days', distance:'108.2 million km', moons:'0', info:'Planet kedua dari Matahari, dikenal karena suhu ekstrem dan atmosfer yang sangat tebal.' },
+  'Earth': { radius:'6,371 km', tilt:'23.5°', rotation:'24 hours', orbit:'365 days', distance:'150 million km', moons:'1 (Bulan)', info:'Planet ketiga dari Matahari dan satu-satunya yang diketahui mendukung kehidupan.' },
+  'Mars': { radius:'3,389.5 km', tilt:'25.19°', rotation:'1.03 Earth days', orbit:'687 Earth days', distance:'227.9 million km', moons:'2 (Phobos dan Deimos)', info:'Dikenal sebagai Planet Merah, terkenal karena penampilan kemerahan dan potensinya untuk kolonisasi manusia.' },
+  'Jupiter': { radius:'69,911 km', tilt:'3.13°', rotation:'9.9 hours', orbit:'12 Earth years', distance:'778.5 million km', moons:'95 dikenal (Ganymede, Callisto, Europa, Io adalah 4 yang terbesar)', info:'Planet terbesar di tata surya kita, terkenal dengan Great Red Spot.' },
+  'Saturn': { radius:'58,232 km', tilt:'26.73°', rotation:'10.7 hours', orbit:'29.5 Earth years', distance:'1.4 billion km', moons:'146 dikenal', info:'Dikenal karena sistem cincinnya yang luas, planet terbesar kedua di tata surya.' },
+  'Uranus': { radius:'25,362 km', tilt:'97.77°', rotation:'17.2 hours', orbit:'84 Earth years', distance:'2.9 billion km', moons:'27 dikenal', info:'Dikenal karena rotasinya yang unik miring ke samping dan warna biru pucat.' },
+  'Neptune': { radius:'24,622 km', tilt:'28.32°', rotation:'16.1 hours', orbit:'165 Earth years', distance:'4.5 billion km', moons:'14 dikenal', info:'Planet paling jauh dari Matahari di tata surya kita, dikenal karena warna biru pekatnya.' },
+  'Pluto': { radius:'1,188.3 km', tilt:'122.53°', rotation:'6.4 Earth days', orbit:'248 Earth years', distance:'5.9 billion km', moons:'5 (Charon, Styx, Nix, Kerberos, Hydra)', info:'Awalnya diklasifikasikan sebagai planet kesembilan; sekarang dianggap sebagai planet kerdil.' }
+};
+
+// raycastTargets tetap di main
+const raycastTargets = [
+  mercury.planet, venus.planet, venus.Atmosphere, earth.planet, earth.Atmosphere,
+  mars.planet, jupiter.planet, saturn.planet, uranus.planet, neptune.planet, pluto.planet
+];
+
+// shadows
+renderer.shadowMap.enabled = true;
+pointLight.castShadow = true;
+pointLight.shadow.mapSize.width = 1024;
+pointLight.shadow.mapSize.height = 1024;
+pointLight.shadow.camera.near = 10;
+pointLight.shadow.camera.far = 20;
+
+// set cast/receive shadow (cek keberadaan properti)
+[earth, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto].forEach(p => {
+  if (p && p.planet) {
+    p.planet.castShadow = true;
+    p.planet.receiveShadow = true;
+  }
+  if (p && p.Atmosphere) {
+    p.Atmosphere.castShadow = true;
+    p.Atmosphere.receiveShadow = true;
+  }
+  if (p && p.moons) {
+    p.moons.forEach(m => {
+      if (m.mesh) { m.mesh.castShadow = true; m.mesh.receiveShadow = true; }
+    });
+  }
+  if (p && p.Ring) p.Ring.receiveShadow = true;
+});
+
+// load asteroids (kembalikan arrays)
+const asteroids1 = loadAsteroids(scene, '/asteroids/asteroidPack.glb', 1000, 130, 160) || [];
+const asteroids2 = loadAsteroids(scene, '/asteroids/asteroidPack.glb', 3000, 352, 370) || [];
+const asteroids = asteroids1.concat(asteroids2);
+
+// Siapkan context dan mulai animate
+const context = {
+  settings, sun, composer, outlinePass, raycaster, mouse, camera, controls,
+  earth, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto,
+  marsMoons, jupiterMoons, asteroids, planetData, raycastTargets,
+  showPlanetInfo, isMovingTowardsPlanetRef, targetCameraPositionRef, zoomFlagsRef,
+  selectedPlanetRef: { value: null }
+};
+animate(context);
+
+// event listeners
+window.addEventListener('mousemove', onMouseMove, false);
+window.addEventListener('mousedown', function(e){ onDocumentMouseDown(e); if (selectedPlanet) context.selectedPlanetRef.value = selectedPlanet; }, false);
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  composer.setSize(window.innerWidth,window.innerHeight);
+});
+
+document.querySelector('.close-btn').addEventListener('click', () => {
+  closeInfo(settings, controls);
+  zoomFlagsRef.isZoomingOut = true;
+  context.selectedPlanetRef.value = null;
+});
