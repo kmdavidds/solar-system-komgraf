@@ -87,15 +87,15 @@ scene.add(lightAmbient);
 scene.background = cubeTextureLoader.load([ bgTexture3, bgTexture1, bgTexture2, bgTexture2, bgTexture4, bgTexture2 ]);
 
 // GUI
-const gui = new dat.GUI({ autoPlace: false });
+const gui = new dat.GUI({ autoPlace: false, width: 400 });
 document.getElementById('gui-container').appendChild(gui.domElement);
 
 // pengaturan interaktif
 const settings = { accelerationOrbit: 1, acceleration: 1, sunIntensity: 1.9 };
 let sunMat = null;
-gui.add(settings, 'accelerationOrbit', 0, 10);
-gui.add(settings, 'acceleration', 0, 10);
-gui.add(settings, 'sunIntensity', 1, 10).onChange(v => { if (sunMat) sunMat.emissiveIntensity = v; });
+gui.add(settings, 'accelerationOrbit', 0, 10).name('Revolusi');
+gui.add(settings, 'acceleration', 0, 10).name('Rotasi');
+gui.add(settings, 'sunIntensity', 1, 10).name('Kecerahan Matahari').onChange(v => { if (sunMat) sunMat.emissiveIntensity = v; });
 
 // raycast & mouse
 const raycaster = new THREE.Raycaster();
@@ -245,6 +245,7 @@ window.addEventListener('resize', function(){
   composer.setSize(window.innerWidth,window.innerHeight);
 });
 
+document.querySelector('.close-btn').textContent = 'Tutup';
 document.querySelector('.close-btn').addEventListener('click', () => {
   closeInfo(settings, controls);
   zoomFlagsRef.isZoomingOut = true;
