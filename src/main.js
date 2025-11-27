@@ -37,8 +37,8 @@ import plutoTexture from '/images/plutomap.jpg';
 
 import { createPlanet } from './scripts/planets.js';
 import { loadAsteroids } from './scripts/loaders.js';
-import { identifyPlanet } from './scripts/identify.js';
-import { showPlanetInfo, closeInfoNoZoomOut, closeInfo } from './scripts/ui.js';
+import { identifyPlanet, identifyMoon } from './scripts/identify.js';
+import { showPlanetInfo, showMoonInfo, closeInfoNoZoomOut, closeInfo } from './scripts/ui.js';
 import { createEarthMaterial } from './scripts/shaders.js';
 import { animate } from './scripts/animate.js';
 
@@ -108,6 +108,8 @@ function onMouseMove(event) {
 
 // PILIH PLANET (state & refs)
 let selectedPlanet = null;
+let selectedMoon = null;
+let selectedMoonParent = null;
 const isMovingTowardsPlanetRef = { value: false };
 const targetCameraPositionRef = { value: new THREE.Vector3() };
 let offset = 0;
@@ -122,9 +124,41 @@ function onDocumentMouseDown(event) {
   const intersects = raycaster.intersectObjects(raycastTargets);
   if (intersects.length > 0) {
     const clickedObject = intersects[0].object;
+    console.log('Clicked object:', clickedObject);
+    
+    // Cek apakah yang diklik adalah moon
+    const moonData = identifyMoon(clickedObject, { earth, jupiter });
+    console.log('Moon data:', moonData);
+    
+    if (moonData.result) {
+      const moon = moonData.result;
+      const parentPlanet = moonData.planetParent;
+      console.log('Moon found:', moon.name, 'from', parentPlanet);
+      
+      selectedPlanet = null;
+      selectedMoon = moon;
+      selectedMoonParent = parentPlanet;
+      closeInfoNoZoomOut(settings);
+      settings.accelerationOrbit = 0;
+      
+      // Dapatkan posisi moon di world
+      const moonPosition = new THREE.Vector3();
+      moon.mesh.getWorldPosition(moonPosition);
+      controls.target.copy(moonPosition);
+      camera.lookAt(moonPosition);
+      offset = moonData.offset;
+      targetCameraPositionRef.value.copy(moonPosition).add(camera.position.clone().sub(moonPosition).normalize().multiplyScalar(offset));
+      isMovingTowardsPlanetRef.value = true;
+      return;
+    }
+    
+    // Jika bukan moon, cek planet
     const { result, offset: newOffset } = identifyPlanet(clickedObject, { mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, pluto });
     if (result) {
+      console.log('Planet found:', result.name);
       selectedPlanet = result;
+      selectedMoon = null;
+      selectedMoonParent = null;
       closeInfoNoZoomOut(settings);
       settings.accelerationOrbit = 0;
       const planetPosition = new THREE.Vector3();
@@ -152,16 +186,16 @@ const pointLight = new THREE.PointLight(0xFDFFD3 , 1200, 400, 1.4);
 scene.add(pointLight);
 
 // MOONS data
-const earthMoon = [{ size:1.6, texture: earthMoonTexture, bump: earthMoonBump, orbitSpeed: 0.001 * settings.accelerationOrbit, orbitRadius: 10 }];
+const earthMoon = [{ name: 'The Moon', size:1.6, texture: earthMoonTexture, bump: earthMoonBump, orbitSpeed: 0.001 * settings.accelerationOrbit, orbitRadius: 10 }];
 const marsMoons = [
-  { modelPath:'/images/mars/phobos.glb', scale:0.1, orbitRadius:5, orbitSpeed:0.002 * settings.accelerationOrbit, position:100, mesh:null },
-  { modelPath:'/images/mars/deimos.glb', scale:0.1, orbitRadius:9, orbitSpeed:0.0005 * settings.accelerationOrbit, position:120, mesh:null }
+  { name: 'Phobos', modelPath:'/images/mars/phobos.glb', scale:0.1, orbitRadius:5, orbitSpeed:0.002 * settings.accelerationOrbit, position:100, mesh:null },
+  { name: 'Deimos', modelPath:'/images/mars/deimos.glb', scale:0.1, orbitRadius:9, orbitSpeed:0.0005 * settings.accelerationOrbit, position:120, mesh:null }
 ];
 const jupiterMoons = [
-  { size:1.6, texture:ioTexture, orbitRadius:20, orbitSpeed:0.0005 * settings.accelerationOrbit },
-  { size:1.4, texture:europaTexture, orbitRadius:24, orbitSpeed:0.00025 * settings.accelerationOrbit },
-  { size:2, texture:ganymedeTexture, orbitRadius:28, orbitSpeed:0.000125 * settings.accelerationOrbit },
-  { size:1.7, texture:callistoTexture, orbitRadius:32, orbitSpeed:0.00006 * settings.accelerationOrbit }
+  { name: 'Io', size:1.6, texture:ioTexture, orbitRadius:20, orbitSpeed:0.0005 * settings.accelerationOrbit },
+  { name: 'Europa', size:1.4, texture:europaTexture, orbitRadius:24, orbitSpeed:0.00025 * settings.accelerationOrbit },
+  { name: 'Ganymede', size:2, texture:ganymedeTexture, orbitRadius:28, orbitSpeed:0.000125 * settings.accelerationOrbit },
+  { name: 'Callisto', size:1.7, texture:callistoTexture, orbitRadius:32, orbitSpeed:0.00006 * settings.accelerationOrbit }
 ];
 
 // BUAT PLANET (memanggil createPlanet)
@@ -193,6 +227,39 @@ const raycastTargets = [
   mercury.planet, venus.planet, venus.Atmosphere, earth.planet, earth.Atmosphere,
   mars.planet, jupiter.planet, saturn.planet, uranus.planet, neptune.planet, pluto.planet
 ];
+
+// Tambahkan moons ke raycastTargets
+if (earth && earth.moons) {
+  console.log('Earth moons count:', earth.moons.length);
+  earth.moons.forEach((moon, idx) => {
+    if (moon.mesh) {
+      raycastTargets.push(moon.mesh);
+      console.log(`Moon ${idx} (${moon.name}) mesh added to raycastTargets`);
+    } else {
+      console.warn(`Moon ${idx} (${moon.name}) has no mesh!`);
+    }
+  });
+}
+if (mars && mars.moons) {
+  console.log('Mars moons count:', mars.moons.length);
+  mars.moons.forEach((moon, idx) => {
+    if (moon.mesh) {
+      raycastTargets.push(moon.mesh);
+      console.log(`Moon ${idx} (${moon.name}) mesh added to raycastTargets`);
+    }
+  });
+}
+if (jupiter && jupiter.moons) {
+  console.log('Jupiter moons count:', jupiter.moons.length);
+  jupiter.moons.forEach((moon, idx) => {
+    if (moon.mesh) {
+      raycastTargets.push(moon.mesh);
+      console.log(`Moon ${idx} (${moon.name}) mesh added to raycastTargets`);
+    } else {
+      console.warn(`Moon ${idx} (${moon.name}) has no mesh!`);
+    }
+  });
+}
 
 // shadows
 renderer.shadowMap.enabled = true;
@@ -230,14 +297,22 @@ const context = {
   settings, sun, composer, outlinePass, raycaster, mouse, camera, controls,
   earth, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto,
   marsMoons, jupiterMoons, asteroids, planetData, raycastTargets,
-  showPlanetInfo, isMovingTowardsPlanetRef, targetCameraPositionRef, zoomFlagsRef,
-  selectedPlanetRef: { value: null }
+  showPlanetInfo, showMoonInfo, isMovingTowardsPlanetRef, targetCameraPositionRef, zoomFlagsRef,
+  selectedPlanetRef: { value: null },
+  selectedMoonRef: { value: null },
+  selectedMoonParentRef: { value: null }
 };
+console.log('Context created, raycastTargets count:', raycastTargets.length);
 animate(context);
 
 // event listeners
 window.addEventListener('mousemove', onMouseMove, false);
-window.addEventListener('mousedown', function(e){ onDocumentMouseDown(e); if (selectedPlanet) context.selectedPlanetRef.value = selectedPlanet; }, false);
+window.addEventListener('mousedown', function(e){ 
+  onDocumentMouseDown(e); 
+  context.selectedPlanetRef.value = selectedPlanet;
+  context.selectedMoonRef.value = selectedMoon;
+  context.selectedMoonParentRef.value = selectedMoonParent;
+}, false);
 window.addEventListener('resize', function(){
   camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
@@ -250,4 +325,8 @@ document.querySelector('.close-btn').addEventListener('click', () => {
   closeInfo(settings, controls);
   zoomFlagsRef.isZoomingOut = true;
   context.selectedPlanetRef.value = null;
+  context.selectedMoonRef.value = null;
+  context.selectedMoonParentRef.value = null;
+  selectedMoon = null;
+  selectedMoonParent = null;
 });

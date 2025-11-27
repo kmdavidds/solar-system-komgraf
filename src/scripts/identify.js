@@ -24,3 +24,28 @@ export function identifyPlanet(clickedObject, planetMap){
 
   return { result: null, offset: 0 };
 }
+
+export function identifyMoon(clickedObject, planetMap){
+  if (!clickedObject || !planetMap) return { result: null, planetParent: null, offset: 0 };
+  const { earth, jupiter } = planetMap;
+
+  // Bulan Bumi
+  if (earth && earth.moons && Array.isArray(earth.moons)) {
+    for (let moon of earth.moons) {
+      if (moon && moon.mesh && moon.mesh === clickedObject) {
+        return { result: moon, planetParent: 'Earth', offset: 5 };
+      }
+    }
+  }
+
+  // Bulan Jupiter
+  if (jupiter && jupiter.moons && Array.isArray(jupiter.moons)) {
+    for (let moon of jupiter.moons) {
+      if (moon && moon.mesh && moon.mesh === clickedObject) {
+        return { result: moon, planetParent: 'Jupiter', offset: 8 };
+      }
+    }
+  }
+
+  return { result: null, planetParent: null, offset: 0 };
+}

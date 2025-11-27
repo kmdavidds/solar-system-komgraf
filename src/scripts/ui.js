@@ -9,6 +9,19 @@ export function showPlanetInfo(planetName, planetData) {
   info.style.display = 'block';
 }
 
+export function showMoonInfo(moon, planetParent) {
+  console.log('showMoonInfo called with moon:', moon, 'parent:', planetParent);
+  var info = document.getElementById('planetInfo');
+  var name = document.getElementById('planetName');
+  var details = document.getElementById('planetDetails');
+
+  name.innerText = moon.name || 'Unknown Moon';
+  details.innerText = `Planet Induk: ${planetParent}\nUkuran: ${moon.size ? moon.size + ' unit' : 'Custom model'}\nJarak Orbit: ${moon.orbitRadius ? moon.orbitRadius + ' unit' : 'N/A'}\nKecepatan Orbit: ${moon.orbitSpeed ? moon.orbitSpeed : 'N/A'}`;
+
+  info.style.display = 'block';
+  console.log('Moon info displayed');
+}
+
 export function closeInfo(settings, controls){
   var info = document.getElementById('planetInfo');
   info.style.display = 'none';
