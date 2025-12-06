@@ -41,6 +41,7 @@ import { identifyPlanet, identifyMoon } from './scripts/identify.js';
 import { showPlanetInfo, showMoonInfo, closeInfoNoZoomOut, closeInfo } from './scripts/ui.js';
 import { createEarthMaterial } from './scripts/shaders.js';
 import { animate } from './scripts/animate.js';
+import { createRocket, RocketController } from './scripts/rocket.js';
 
 // ******  PERSIAPAN  ******
 console.log("Membuat scene");
@@ -82,8 +83,9 @@ composer.addPass(bloomPass);
 
 // cahaya ambient & background
 console.log("Menambahkan cahaya ambient");
-const lightAmbient = new THREE.AmbientLight(0x222222, 6);
+const lightAmbient = new THREE.AmbientLight(0x222222, 2.5); // Balanced, jangan overpowering
 scene.add(lightAmbient);
+
 scene.background = cubeTextureLoader.load([ bgTexture3, bgTexture1, bgTexture2, bgTexture2, bgTexture4, bgTexture2 ]);
 
 // GUI
@@ -91,11 +93,14 @@ const gui = new dat.GUI({ autoPlace: false, width: 400 });
 document.getElementById('gui-container').appendChild(gui.domElement);
 
 // pengaturan interaktif
-const settings = { accelerationOrbit: 1, acceleration: 1, sunIntensity: 1.9 };
+const settings = { accelerationOrbit: 1, acceleration: 1, sunIntensity: 1.9, freeFlightMode: false };
 let sunMat = null;
+let lastFreeFlightMode = false; // Track mode changes
 gui.add(settings, 'accelerationOrbit', 0, 10).name('Revolusi');
 gui.add(settings, 'acceleration', 0, 10).name('Rotasi');
 gui.add(settings, 'sunIntensity', 1, 10).name('Kecerahan Matahari').onChange(v => { if (sunMat) sunMat.emissiveIntensity = v; });
+const freeFlightToggle = gui.add(settings, 'freeFlightMode').name('Free Flight Mode');
+// Handler akan di-setup setelah rocket creation
 
 // raycast & mouse
 const raycaster = new THREE.Raycaster();
@@ -122,6 +127,22 @@ function onDocumentMouseDown(event) {
   mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(raycastTargets);
+  
+  // Di free flight mode, allow click tapi hanya untuk select planet (tidak zoom)
+  if (settings.freeFlightMode) {
+    if (intersects.length > 0) {
+      const clickedObject = intersects[0].object;
+      const { result } = identifyPlanet(clickedObject, { mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, pluto });
+      if (result) {
+        // Show planet info di free flight mode juga
+        selectedPlanet = result;
+        showPlanetInfo(result.name, planetData);
+      }
+    }
+    return;
+  }
+  
+  // Normal orbit mode clicks (dengan zoom)
   if (intersects.length > 0) {
     const clickedObject = intersects[0].object;
     console.log('Clicked object:', clickedObject);
@@ -292,6 +313,40 @@ const asteroids1 = loadAsteroids(scene, '/asteroids/asteroidPack.glb', 1000, 130
 const asteroids2 = loadAsteroids(scene, '/asteroids/asteroidPack.glb', 3000, 352, 370) || [];
 const asteroids = asteroids1.concat(asteroids2);
 
+// Buat roket dan kontrol
+const rocketMesh = createRocket(scene);
+const rocketController = new RocketController(rocketMesh);
+
+// Ambient light sudah cukup untuk menerangi roket
+
+// Setup free flight toggle handler (setelah rocket dibuat)
+freeFlightToggle.onChange(() => {
+  if (settings.freeFlightMode && !lastFreeFlightMode) {
+    // Entering free flight mode
+    isMovingTowardsPlanetRef.value = false;
+    zoomFlagsRef.isZoomingOut = false;
+    
+    // Reset controls sepenuhnya
+    controls.reset();
+    controls.enabled = false;
+    
+    // Set target ke rocket position supaya tidak orbit ke sun
+    controls.target.copy(rocketMesh.position);
+    
+    // Show crosshair dan help
+    crosshair.style.display = 'block';
+  } else if (!settings.freeFlightMode && lastFreeFlightMode) {
+    // Exiting free flight mode
+    controls.enabled = true;
+    // Reset target ke sun (0, 0, 0)
+    controls.target.set(0, 0, 0);
+    
+    // Hide crosshair
+    crosshair.style.display = 'none';
+  }
+  lastFreeFlightMode = settings.freeFlightMode;
+});
+
 // Siapkan context dan mulai animate
 const context = {
   settings, sun, composer, outlinePass, raycaster, mouse, camera, controls,
@@ -301,6 +356,9 @@ const context = {
   selectedPlanetRef: { value: null },
   selectedMoonRef: { value: null },
   selectedMoonParentRef: { value: null }
+  showPlanetInfo, isMovingTowardsPlanetRef, targetCameraPositionRef, zoomFlagsRef,
+  selectedPlanetRef: { value: null },
+  rocketMesh, rocketController
 };
 console.log('Context created, raycastTargets count:', raycastTargets.length);
 animate(context);
@@ -329,4 +387,72 @@ document.querySelector('.close-btn').addEventListener('click', () => {
   context.selectedMoonParentRef.value = null;
   selectedMoon = null;
   selectedMoonParent = null;
+});
+
+// Create crosshair untuk free flight mode
+const crosshair = document.createElement('div');
+crosshair.id = 'crosshair';
+crosshair.style.cssText = `
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  display: none;
+  z-index: 50;
+`;
+// Buat crosshair dengan SVG
+crosshair.innerHTML = `
+  <svg width="40" height="40" viewBox="0 0 40 40" style="overflow: visible;">
+    <circle cx="20" cy="20" r="15" stroke="#0ff" stroke-width="1" fill="none" opacity="0.7"/>
+    <line x1="20" y1="5" x2="20" y2="12" stroke="#0ff" stroke-width="2" opacity="0.8"/>
+    <line x1="20" y1="28" x2="20" y2="35" stroke="#0ff" stroke-width="2" opacity="0.8"/>
+    <line x1="5" y1="20" x2="12" y2="20" stroke="#0ff" stroke-width="2" opacity="0.8"/>
+    <line x1="28" y1="20" x2="35" y2="20" stroke="#0ff" stroke-width="2" opacity="0.8"/>
+    <circle cx="20" cy="20" r="3" fill="#0ff" opacity="0.9"/>
+  </svg>
+`;
+document.body.appendChild(crosshair);
+
+// Create help overlay untuk free flight mode
+const helpOverlay = document.createElement('div');
+helpOverlay.id = 'flight-help';
+helpOverlay.style.cssText = `
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #0f0;
+  font-family: monospace;
+  font-size: 12px;
+  border: 2px solid #0f0;
+  display: none;
+  max-width: 250px;
+  z-index: 100;
+`;
+helpOverlay.innerHTML = `
+  <div style="margin-bottom: 10px; font-weight: bold; color: #0ff;">FREE FLIGHT MODE</div>
+  <div><strong>Movement:</strong></div>
+  <div>W/A/S/D - Move forward/left/back/right</div>
+  <div>SPACE - Move up</div>
+  <div>CTRL - Move down</div>
+  <div style="margin-top: 8px;"><strong>Rotation:</strong></div>
+  <div>↑/↓ - Pitch up/down</div>
+  <div>←/→ - Yaw left/right</div>
+  <div>Q/E - Roll left/right</div>
+  <div style="margin-top: 8px;"><strong>Speed:</strong></div>
+  <div>SHIFT - Accelerate (2x speed)</div>
+`;
+document.body.appendChild(helpOverlay);
+
+// Properly update help overlay when toggle changes
+gui.__controllers.forEach(controller => {
+  if (controller.property === 'freeFlightMode') {
+    controller.onChange(() => {
+      helpOverlay.style.display = settings.freeFlightMode ? 'block' : 'none';
+    });
+  }
 });

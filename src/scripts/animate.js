@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { updateRocketCamera } from './rocket.js';
+
 export function animate(context){
   const {
     settings, sun, composer, outlinePass, raycaster, mouse, camera, controls,
@@ -10,6 +13,9 @@ export function animate(context){
     selectedPlanetRef,
     selectedMoonRef,
     selectedMoonParentRef
+    rocketMesh,
+    rocketController,
+    rocketSpotlight
   } = context;
 
   function frame(){
@@ -107,13 +113,49 @@ export function animate(context){
           console.log('Showing planet info:', selectedPlanetRef.value.name);
           showPlanetInfo(selectedPlanetRef.value.name, planetData);
         }
+    // zoom in/out (skip jika free flight mode)
+    if (!settings.freeFlightMode) {
+      if (isMovingTowardsPlanetRef.value) {
+        camera.position.lerp(targetCameraPositionRef.value, 0.03);
+        if (camera.position.distanceTo(targetCameraPositionRef.value) < 1) {
+          isMovingTowardsPlanetRef.value = false;
+          if (selectedPlanetRef && selectedPlanetRef.value) showPlanetInfo(selectedPlanetRef.value.name, planetData);
+        }
+      } else if (zoomFlagsRef.isZoomingOut) {
+        camera.position.lerp(zoomFlagsRef.zoomOutTargetPosition, 0.05);
+        if (camera.position.distanceTo(zoomFlagsRef.zoomOutTargetPosition) < 1) zoomFlagsRef.isZoomingOut = false;
       }
-    } else if (zoomFlagsRef.isZoomingOut) {
-      camera.position.lerp(zoomFlagsRef.zoomOutTargetPosition, 0.05);
-      if (camera.position.distanceTo(zoomFlagsRef.zoomOutTargetPosition) < 1) zoomFlagsRef.isZoomingOut = false;
     }
 
-    controls.update();
+    // Free flight mode
+    if (settings.freeFlightMode) {
+      rocketController.update();
+      
+      // Update camera untuk mengikuti roket (third person)
+      updateRocketCamera(camera, rocketController.getRocketPosition(), rocketController.getRocketQuaternion(), 25, 10);
+      
+      // Update spotlight position untuk mengikuti roket
+      if (rocketSpotlight) {
+        rocketSpotlight.position.copy(rocketMesh.position).add(new THREE.Vector3(0, -30, -30));
+        rocketSpotlight.target = rocketMesh;
+      }
+      
+      // Disable orbit controls sepenuhnya
+      controls.enabled = false;
+      controls.autoRotate = false;
+      controls.dampingFactor = 0;
+    } else {
+      controls.enabled = true;
+      controls.autoRotate = false;
+      controls.dampingFactor = 0.75;
+      controls.update();
+    }
+
+    // Hanya update controls saat tidak di free flight mode
+    if (!settings.freeFlightMode) {
+      controls.update();
+    }
+
     requestAnimationFrame(frame);
     composer.render();
   }
