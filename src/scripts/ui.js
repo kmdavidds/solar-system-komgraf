@@ -4,7 +4,7 @@ export function showPlanetInfo(planetName, planetData) {
   var details = document.getElementById('planetDetails');
 
   name.innerText = planetName;
-  details.innerText = `Radius: ${planetData[planetName].radius}\nTilt: ${planetData[planetName].tilt}\nRotation: ${planetData[planetName].rotation}\nOrbit: ${planetData[planetName].orbit}\nDistance: ${planetData[planetName].distance}\nMoons: ${planetData[planetName].moons}\nInfo: ${planetData[planetName].info}`;
+  details.innerText = `Radius: ${planetData[planetName].radius}\nKemiringan: ${planetData[planetName].tilt}\nRotasi: ${planetData[planetName].rotation}\nOrbit: ${planetData[planetName].orbit}\nJarak: ${planetData[planetName].distance}\nBulan: ${planetData[planetName].moons}\nInfo: ${planetData[planetName].info}`;
 
   info.style.display = 'block';
 }
@@ -15,8 +15,8 @@ export function showMoonInfo(moon, planetParent) {
   var name = document.getElementById('planetName');
   var details = document.getElementById('planetDetails');
 
-  name.innerText = moon.name || 'Unknown Moon';
-  details.innerText = `Planet Induk: ${planetParent}\nUkuran: ${moon.size ? moon.size + ' unit' : 'Custom model'}\nJarak Orbit: ${moon.orbitRadius ? moon.orbitRadius + ' unit' : 'N/A'}\nKecepatan Orbit: ${moon.orbitSpeed ? moon.orbitSpeed : 'N/A'}`;
+  name.innerText = moon.name || 'Bulan Tidak Dikenal';
+  details.innerText = `Planet Induk: ${planetParent}\nUkuran: ${moon.size ? moon.size + ' unit' : 'Model khusus'}\nJarak Orbit: ${moon.orbitRadius ? moon.orbitRadius + ' unit' : 'N/A'}\nKecepatan Orbit: ${moon.orbitSpeed ? moon.orbitSpeed : 'N/A'}`;
 
   info.style.display = 'block';
   console.log('Moon info displayed');

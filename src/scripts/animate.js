@@ -107,10 +107,10 @@ export function animate(context){
         isMovingTowardsPlanetRef.value = false;
         // Check moon info dulu
         if (selectedMoonRef && selectedMoonRef.value && selectedMoonRef.value.name && selectedMoonParentRef && selectedMoonParentRef.value) {
-          console.log('Showing moon info:', selectedMoonRef.value.name);
+          console.log('Menampilkan info bulan:', selectedMoonRef.value.name);
           showMoonInfo(selectedMoonRef.value, selectedMoonParentRef.value);
         } else if (selectedPlanetRef && selectedPlanetRef.value && selectedPlanetRef.value.name) {
-          console.log('Showing planet info:', selectedPlanetRef.value.name);
+          console.log('Menampilkan info planet:', selectedPlanetRef.value.name);
           showPlanetInfo(selectedPlanetRef.value.name, planetData);
         }
       }

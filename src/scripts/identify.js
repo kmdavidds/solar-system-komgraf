@@ -33,7 +33,7 @@ export function identifyMoon(clickedObject, planetMap){
   if (earth && earth.moons && Array.isArray(earth.moons)) {
     for (let moon of earth.moons) {
       if (moon && moon.mesh && moon.mesh === clickedObject) {
-        return { result: moon, planetParent: 'Earth', offset: 5 };
+        return { result: moon, planetParent: 'Bumi', offset: 5 };
       }
     }
   }
