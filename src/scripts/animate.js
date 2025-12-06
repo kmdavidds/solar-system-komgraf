@@ -12,7 +12,7 @@ export function animate(context){
     zoomFlagsRef,
     selectedPlanetRef,
     selectedMoonRef,
-    selectedMoonParentRef
+    selectedMoonParentRef,
     rocketMesh,
     rocketController,
     rocketSpotlight
@@ -113,6 +113,9 @@ export function animate(context){
           console.log('Showing planet info:', selectedPlanetRef.value.name);
           showPlanetInfo(selectedPlanetRef.value.name, planetData);
         }
+      }
+    }
+
     // zoom in/out (skip jika free flight mode)
     if (!settings.freeFlightMode) {
       if (isMovingTowardsPlanetRef.value) {
@@ -130,16 +133,16 @@ export function animate(context){
     // Free flight mode
     if (settings.freeFlightMode) {
       rocketController.update();
-      
+
       // Update camera untuk mengikuti roket (third person)
       updateRocketCamera(camera, rocketController.getRocketPosition(), rocketController.getRocketQuaternion(), 25, 10);
-      
+
       // Update spotlight position untuk mengikuti roket
       if (rocketSpotlight) {
         rocketSpotlight.position.copy(rocketMesh.position).add(new THREE.Vector3(0, -30, -30));
         rocketSpotlight.target = rocketMesh;
       }
-      
+
       // Disable orbit controls sepenuhnya
       controls.enabled = false;
       controls.autoRotate = false;

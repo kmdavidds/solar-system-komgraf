@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solar System</title>
+    
+    <script type="module" crossorigin src="./assets/index-05643b5b.js"></script>
+    <link rel="stylesheet" href="./assets/index-15e3c99c.css">
+  </head>
+  <body>
+    <div id="gui-container"></div>
+    
+    <!-- Crosshair untuk free flight mode -->
+    <svg id="crosshair" width="60" height="60" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; z-index: 100;">
+      <circle cx="30" cy="30" r="20" fill="none" stroke="#00ff00" stroke-width="2" opacity="0.7"/>
+      <line x1="30" y1="10" x2="30" y2="20" stroke="#00ff00" stroke-width="2" opacity="0.7"/>
+      <line x1="30" y1="40" x2="30" y2="50" stroke="#00ff00" stroke-width="2" opacity="0.7"/>
+      <line x1="10" y1="30" x2="20" y2="30" stroke="#00ff00" stroke-width="2" opacity="0.7"/>
+      <line x1="40" y1="30" x2="50" y2="30" stroke="#00ff00" stroke-width="2" opacity="0.7"/>
+      <circle cx="30" cy="30" r="3" fill="#00ff00" opacity="0.7"/>
+    </svg>
+    <div></div>
+    <div id="planetInfo" class="planet-info">
+      <div class="planet-info-content">
+        <span class="close-btn">&times;</span>
+        <h2 id="planetName"></h2>
+        <p id="planetDetails"></p>
+      </div>
+    </div>
+  </body>
+</html>

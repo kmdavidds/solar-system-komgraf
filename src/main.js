@@ -127,7 +127,7 @@ function onDocumentMouseDown(event) {
   mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(raycastTargets);
-  
+
   // Di free flight mode, allow click tapi hanya untuk select planet (tidak zoom)
   if (settings.freeFlightMode) {
     if (intersects.length > 0) {
@@ -141,27 +141,27 @@ function onDocumentMouseDown(event) {
     }
     return;
   }
-  
+
   // Normal orbit mode clicks (dengan zoom)
   if (intersects.length > 0) {
     const clickedObject = intersects[0].object;
     console.log('Clicked object:', clickedObject);
-    
+
     // Cek apakah yang diklik adalah moon
     const moonData = identifyMoon(clickedObject, { earth, jupiter });
     console.log('Moon data:', moonData);
-    
+
     if (moonData.result) {
       const moon = moonData.result;
       const parentPlanet = moonData.planetParent;
       console.log('Moon found:', moon.name, 'from', parentPlanet);
-      
+
       selectedPlanet = null;
       selectedMoon = moon;
       selectedMoonParent = parentPlanet;
       closeInfoNoZoomOut(settings);
       settings.accelerationOrbit = 0;
-      
+
       // Dapatkan posisi moon di world
       const moonPosition = new THREE.Vector3();
       moon.mesh.getWorldPosition(moonPosition);
@@ -172,7 +172,7 @@ function onDocumentMouseDown(event) {
       isMovingTowardsPlanetRef.value = true;
       return;
     }
-    
+
     // Jika bukan moon, cek planet
     const { result, offset: newOffset } = identifyPlanet(clickedObject, { mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, pluto });
     if (result) {
@@ -325,14 +325,14 @@ freeFlightToggle.onChange(() => {
     // Entering free flight mode
     isMovingTowardsPlanetRef.value = false;
     zoomFlagsRef.isZoomingOut = false;
-    
+
     // Reset controls sepenuhnya
     controls.reset();
     controls.enabled = false;
-    
+
     // Set target ke rocket position supaya tidak orbit ke sun
     controls.target.copy(rocketMesh.position);
-    
+
     // Show crosshair dan help
     crosshair.style.display = 'block';
   } else if (!settings.freeFlightMode && lastFreeFlightMode) {
@@ -340,7 +340,7 @@ freeFlightToggle.onChange(() => {
     controls.enabled = true;
     // Reset target ke sun (0, 0, 0)
     controls.target.set(0, 0, 0);
-    
+
     // Hide crosshair
     crosshair.style.display = 'none';
   }
@@ -355,7 +355,7 @@ const context = {
   showPlanetInfo, showMoonInfo, isMovingTowardsPlanetRef, targetCameraPositionRef, zoomFlagsRef,
   selectedPlanetRef: { value: null },
   selectedMoonRef: { value: null },
-  selectedMoonParentRef: { value: null }
+  selectedMoonParentRef: { value: null },
   showPlanetInfo, isMovingTowardsPlanetRef, targetCameraPositionRef, zoomFlagsRef,
   selectedPlanetRef: { value: null },
   rocketMesh, rocketController
@@ -365,8 +365,8 @@ animate(context);
 
 // event listeners
 window.addEventListener('mousemove', onMouseMove, false);
-window.addEventListener('mousedown', function(e){ 
-  onDocumentMouseDown(e); 
+window.addEventListener('mousedown', function(e){
+  onDocumentMouseDown(e);
   context.selectedPlanetRef.value = selectedPlanet;
   context.selectedMoonRef.value = selectedMoon;
   context.selectedMoonParentRef.value = selectedMoonParent;
