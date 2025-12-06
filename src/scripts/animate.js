@@ -6,11 +6,13 @@ export function animate(context){
     settings, sun, composer, outlinePass, raycaster, mouse, camera, controls,
     earth, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto,
     marsMoons, jupiterMoons, asteroids, planetData, raycastTargets,
-    showPlanetInfo,
+    showPlanetInfo, showMoonInfo,
     isMovingTowardsPlanetRef,
     targetCameraPositionRef,
     zoomFlagsRef,
     selectedPlanetRef,
+    selectedMoonRef,
+    selectedMoonParentRef
     rocketMesh,
     rocketController,
     rocketSpotlight
@@ -41,7 +43,7 @@ export function animate(context){
     if (pluto && pluto.planet3d) pluto.planet3d.rotateY(0.00006 * settings.accelerationOrbit);
 
     // Bulan Bumi
-    if (earth && earth.moons) {
+    if (earth && earth.moons && !selectedMoonRef.value) {
       earth.moons.forEach(moon => {
         const time = performance.now();
         const tiltAngle = 5 * Math.PI / 180;
@@ -54,7 +56,7 @@ export function animate(context){
     }
 
     // Mars moons
-    if (marsMoons){
+    if (marsMoons && !selectedMoonRef.value){
       marsMoons.forEach(moon => {
         if (moon.mesh) {
           const time = performance.now();
@@ -68,7 +70,7 @@ export function animate(context){
     }
 
     // Jupiter moons
-    if (jupiter && jupiter.moons) {
+    if (jupiter && jupiter.moons && !selectedMoonRef.value) {
       jupiter.moons.forEach(moon => {
         const time = performance.now();
         const moonX = jupiter.planet.position.x + moon.orbitRadius * Math.cos(time * moon.orbitSpeed);
@@ -98,6 +100,19 @@ export function animate(context){
       else outlinePass.selectedObjects = [intersectedObject];
     }
 
+    // zoom in/out
+    if (isMovingTowardsPlanetRef.value) {
+      camera.position.lerp(targetCameraPositionRef.value, 0.03);
+      if (camera.position.distanceTo(targetCameraPositionRef.value) < 1) {
+        isMovingTowardsPlanetRef.value = false;
+        // Check moon info dulu
+        if (selectedMoonRef && selectedMoonRef.value && selectedMoonRef.value.name && selectedMoonParentRef && selectedMoonParentRef.value) {
+          console.log('Showing moon info:', selectedMoonRef.value.name);
+          showMoonInfo(selectedMoonRef.value, selectedMoonParentRef.value);
+        } else if (selectedPlanetRef && selectedPlanetRef.value && selectedPlanetRef.value.name) {
+          console.log('Showing planet info:', selectedPlanetRef.value.name);
+          showPlanetInfo(selectedPlanetRef.value.name, planetData);
+        }
     // zoom in/out (skip jika free flight mode)
     if (!settings.freeFlightMode) {
       if (isMovingTowardsPlanetRef.value) {
