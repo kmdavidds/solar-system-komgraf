@@ -43,7 +43,7 @@ export function animate(context){
     if (pluto && pluto.planet3d) pluto.planet3d.rotateY(0.00006 * settings.accelerationOrbit);
 
     // Bulan Bumi
-    if (earth && earth.moons && !selectedMoonRef.value) {
+    if (earth && earth.moons) {
       earth.moons.forEach(moon => {
         const time = performance.now();
         const tiltAngle = 5 * Math.PI / 180;
@@ -56,7 +56,7 @@ export function animate(context){
     }
 
     // Mars moons
-    if (marsMoons && !selectedMoonRef.value){
+    if (marsMoons){
       marsMoons.forEach(moon => {
         if (moon.mesh) {
           const time = performance.now();
@@ -70,7 +70,7 @@ export function animate(context){
     }
 
     // Jupiter moons
-    if (jupiter && jupiter.moons && !selectedMoonRef.value) {
+    if (jupiter && jupiter.moons) {
       jupiter.moons.forEach(moon => {
         const time = performance.now();
         const moonX = jupiter.planet.position.x + moon.orbitRadius * Math.cos(time * moon.orbitSpeed);
@@ -92,6 +92,13 @@ export function animate(context){
     // outlines (raycast)
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(raycastTargets);
+    
+    // Debug free flight raycast
+    if (settings.freeFlightMode && intersects.length > 0) {
+      console.log('Raycast free flight intersects:', intersects.length, 'objects');
+      console.log('First object:', intersects[0].object);
+    }
+    
     outlinePass.selectedObjects = [];
     if (intersects.length > 0) {
       const intersectedObject = intersects[0].object;

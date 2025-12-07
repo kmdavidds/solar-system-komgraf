@@ -125,19 +125,40 @@ function onDocumentMouseDown(event) {
   event.preventDefault();
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  console.log('Mouse click - normalized coords:', { x: mouse.x, y: mouse.y });
+  
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(raycastTargets);
+  console.log('Raycast intersects count:', intersects.length, 'raycastTargets count:', raycastTargets.length);
 
-  // Di free flight mode, allow click tapi hanya untuk select planet (tidak zoom)
+  // Di free flight mode, allow click tapi hanya untuk select planet/moon (tidak zoom)
   if (settings.freeFlightMode) {
+    console.log('Free flight mode ON');
     if (intersects.length > 0) {
       const clickedObject = intersects[0].object;
+      console.log('Free flight mode - Clicked object:', clickedObject.name || 'unnamed');
+      
+      // Cek moon dulu
+      const moonData = identifyMoon(clickedObject, { earth, jupiter });
+      if (moonData.result) {
+        selectedMoon = moonData.result;
+        selectedMoonParent = moonData.planetParent;
+        showMoonInfo(moonData.result, moonData.planetParent);
+        console.log('Moon selected in free flight:', moonData.result.name);
+        return;
+      }
+      
+      // Jika bukan moon, cek planet
       const { result } = identifyPlanet(clickedObject, { mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, pluto });
       if (result) {
-        // Show planet info di free flight mode juga
         selectedPlanet = result;
+        selectedMoon = null;
+        selectedMoonParent = null;
         showPlanetInfo(result.name, planetData);
+        console.log('Planet selected in free flight:', result.name);
       }
+    } else {
+      console.log('No objects intersected in free flight mode');
     }
     return;
   }
@@ -250,36 +271,45 @@ const raycastTargets = [
 ];
 
 // Tambahkan moons ke raycastTargets
+console.log('=== RAYCAST TARGETS INITIALIZATION ===');
 if (earth && earth.moons) {
-  console.log('Earth moons count:', earth.moons.length);
+  console.log('✓ Earth moons count:', earth.moons.length);
   earth.moons.forEach((moon, idx) => {
     if (moon.mesh) {
       raycastTargets.push(moon.mesh);
-      console.log(`Moon ${idx} (${moon.name}) mesh added to raycastTargets`);
+      console.log(`  ✓ Moon ${idx} (${moon.name}) mesh added`);
     } else {
-      console.warn(`Moon ${idx} (${moon.name}) has no mesh!`);
+      console.warn(`  ✗ Moon ${idx} (${moon.name}) has no mesh!`);
     }
   });
+} else {
+  console.log('✗ Earth has no moons');
 }
+
 if (mars && mars.moons) {
-  console.log('Mars moons count:', mars.moons.length);
+  console.log('✓ Mars moons count:', mars.moons.length);
   mars.moons.forEach((moon, idx) => {
     if (moon.mesh) {
       raycastTargets.push(moon.mesh);
-      console.log(`Moon ${idx} (${moon.name}) mesh added to raycastTargets`);
+      console.log(`  ✓ Moon ${idx} (${moon.name}) mesh added`);
     }
   });
+} else {
+  console.log('✗ Mars has no moons');
 }
+
 if (jupiter && jupiter.moons) {
-  console.log('Jupiter moons count:', jupiter.moons.length);
+  console.log('✓ Jupiter moons count:', jupiter.moons.length);
   jupiter.moons.forEach((moon, idx) => {
     if (moon.mesh) {
       raycastTargets.push(moon.mesh);
-      console.log(`Moon ${idx} (${moon.name}) mesh added to raycastTargets`);
+      console.log(`  ✓ Moon ${idx} (${moon.name}) mesh added`);
     } else {
-      console.warn(`Moon ${idx} (${moon.name}) has no mesh!`);
+      console.warn(`  ✗ Moon ${idx} (${moon.name}) has no mesh!`);
     }
   });
+} else {
+  console.log('✗ Jupiter has no moons');
 }
 
 // shadows
