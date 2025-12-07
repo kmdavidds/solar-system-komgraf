@@ -10,7 +10,6 @@ export function showPlanetInfo(planetName, planetData) {
 }
 
 export function showMoonInfo(moon, planetParent) {
-  console.log('showMoonInfo called with moon:', moon, 'parent:', planetParent);
   var info = document.getElementById('planetInfo');
   var name = document.getElementById('planetName');
   var details = document.getElementById('planetDetails');
@@ -19,7 +18,6 @@ export function showMoonInfo(moon, planetParent) {
   details.innerText = `Planet Induk: ${planetParent}\nUkuran: ${moon.size ? moon.size + ' unit' : 'Model khusus'}\nJarak Orbit: ${moon.orbitRadius ? moon.orbitRadius + ' unit' : 'N/A'}\nKecepatan Orbit: ${moon.orbitSpeed ? moon.orbitSpeed : 'N/A'}`;
 
   info.style.display = 'block';
-  console.log('Moon info displayed');
 }
 
 export function closeInfo(settings, controls){

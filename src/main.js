@@ -44,26 +44,21 @@ import { animate } from './scripts/animate.js';
 import { createRocket, RocketController } from './scripts/rocket.js';
 
 // ******  PERSIAPAN  ******
-console.log("Membuat scene");
 const scene = new THREE.Scene();
 
-console.log("Membuat kamera proyeksi perspektif");
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(-175, 115, 5);
 
-console.log("Membuat renderer");
 const renderer = new THREE.WebGL1Renderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-console.log("Membuat kontrol orbit");
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.75;
 controls.screenSpacePanning = false;
 
-console.log("Menyiapkan pemuat tekstur");
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 const loadTexture = new THREE.TextureLoader();
 
@@ -82,7 +77,6 @@ bloomPass.radius = 0.9;
 composer.addPass(bloomPass);
 
 // cahaya ambient & background
-console.log("Menambahkan cahaya ambient");
 const lightAmbient = new THREE.AmbientLight(0x222222, 2.5); // Balanced, jangan overpowering
 scene.add(lightAmbient);
 
@@ -125,18 +119,14 @@ function onDocumentMouseDown(event) {
   event.preventDefault();
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-  console.log('Mouse click - normalized coords:', { x: mouse.x, y: mouse.y });
   
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(raycastTargets);
-  console.log('Raycast intersects count:', intersects.length, 'raycastTargets count:', raycastTargets.length);
 
   // Di free flight mode, allow click tapi hanya untuk select planet/moon (tidak zoom)
   if (settings.freeFlightMode) {
-    console.log('Free flight mode ON');
     if (intersects.length > 0) {
       const clickedObject = intersects[0].object;
-      console.log('Free flight mode - Clicked object:', clickedObject.name || 'unnamed');
       
       // Cek moon dulu
       const moonData = identifyMoon(clickedObject, { earth, jupiter });
@@ -144,7 +134,6 @@ function onDocumentMouseDown(event) {
         selectedMoon = moonData.result;
         selectedMoonParent = moonData.planetParent;
         showMoonInfo(moonData.result, moonData.planetParent);
-        console.log('Moon selected in free flight:', moonData.result.name);
         return;
       }
       
@@ -155,10 +144,8 @@ function onDocumentMouseDown(event) {
         selectedMoon = null;
         selectedMoonParent = null;
         showPlanetInfo(result.name, planetData);
-        console.log('Planet selected in free flight:', result.name);
       }
     } else {
-      console.log('No objects intersected in free flight mode');
     }
     return;
   }
@@ -166,16 +153,13 @@ function onDocumentMouseDown(event) {
   // Normal orbit mode clicks (dengan zoom)
   if (intersects.length > 0) {
     const clickedObject = intersects[0].object;
-    console.log('Objek yang diklik:', clickedObject);
 
     // Cek apakah yang diklik adalah moon
     const moonData = identifyMoon(clickedObject, { earth, jupiter });
-    console.log('Data bulan:', moonData);
 
     if (moonData.result) {
       const moon = moonData.result;
       const parentPlanet = moonData.planetParent;
-      console.log('Bulan ditemukan:', moon.name, 'dari', parentPlanet);
 
       selectedPlanet = null;
       selectedMoon = moon;
@@ -197,7 +181,6 @@ function onDocumentMouseDown(event) {
     // Jika bukan moon, cek planet
     const { result, offset: newOffset } = identifyPlanet(clickedObject, { mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, pluto });
     if (result) {
-      console.log('Planet ditemukan:', result.name);
       selectedPlanet = result;
       selectedMoon = null;
       selectedMoonParent = null;
@@ -271,45 +254,29 @@ const raycastTargets = [
 ];
 
 // Tambahkan moons ke raycastTargets
-console.log('=== RAYCAST TARGETS INITIALIZATION ===');
 if (earth && earth.moons) {
-  console.log('✓ Earth moons count:', earth.moons.length);
   earth.moons.forEach((moon, idx) => {
     if (moon.mesh) {
       raycastTargets.push(moon.mesh);
-      console.log(`  ✓ Moon ${idx} (${moon.name}) mesh added`);
     } else {
-      console.warn(`  ✗ Moon ${idx} (${moon.name}) has no mesh!`);
     }
   });
-} else {
-  console.log('✗ Earth has no moons');
 }
 
 if (mars && mars.moons) {
-  console.log('✓ Mars moons count:', mars.moons.length);
   mars.moons.forEach((moon, idx) => {
     if (moon.mesh) {
       raycastTargets.push(moon.mesh);
-      console.log(`  ✓ Moon ${idx} (${moon.name}) mesh added`);
     }
   });
-} else {
-  console.log('✗ Mars has no moons');
-}
+} 
 
 if (jupiter && jupiter.moons) {
-  console.log('✓ Jupiter moons count:', jupiter.moons.length);
   jupiter.moons.forEach((moon, idx) => {
     if (moon.mesh) {
       raycastTargets.push(moon.mesh);
-      console.log(`  ✓ Moon ${idx} (${moon.name}) mesh added`);
-    } else {
-      console.warn(`  ✗ Moon ${idx} (${moon.name}) has no mesh!`);
     }
   });
-} else {
-  console.log('✗ Jupiter has no moons');
 }
 
 // shadows
@@ -390,7 +357,6 @@ const context = {
   selectedPlanetRef: { value: null },
   rocketMesh, rocketController
 };
-console.log('Context created, raycastTargets count:', raycastTargets.length);
 animate(context);
 
 // event listeners

@@ -131,11 +131,6 @@ export class RocketController {
     const speed = this.isAccelerating ? this.moveSpeed * 2 : this.moveSpeed;
     let isMoving = false;
 
-    // Debug log semua keys yang ditekan
-    if (Object.values(this.keys).some(v => v)) {
-      //console.log('Keys pressed:', this.keys);
-    }
-
     // Rotasi dengan arrow keys
     // Pitch (naik/turun) - Arrow Up/Down
     // NO LIMITS - allow full rotation

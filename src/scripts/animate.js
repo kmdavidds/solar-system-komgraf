@@ -93,12 +93,6 @@ export function animate(context){
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(raycastTargets);
     
-    // Debug free flight raycast
-    if (settings.freeFlightMode && intersects.length > 0) {
-      console.log('Raycast free flight intersects:', intersects.length, 'objects');
-      console.log('First object:', intersects[0].object);
-    }
-    
     outlinePass.selectedObjects = [];
     if (intersects.length > 0) {
       const intersectedObject = intersects[0].object;
@@ -114,10 +108,8 @@ export function animate(context){
         isMovingTowardsPlanetRef.value = false;
         // Check moon info dulu
         if (selectedMoonRef && selectedMoonRef.value && selectedMoonRef.value.name && selectedMoonParentRef && selectedMoonParentRef.value) {
-          console.log('Menampilkan info bulan:', selectedMoonRef.value.name);
           showMoonInfo(selectedMoonRef.value, selectedMoonParentRef.value);
         } else if (selectedPlanetRef && selectedPlanetRef.value && selectedPlanetRef.value.name) {
-          console.log('Menampilkan info planet:', selectedPlanetRef.value.name);
           showPlanetInfo(selectedPlanetRef.value.name, planetData);
         }
       }
